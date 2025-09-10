@@ -19,6 +19,9 @@ dependencies = [
     "flask-avatars>=0.2.3",
     "pyjwt>=2.8.0",
     "email-validator>=2.1.0.post1",
+    "msrest>=0.7.1",
+    "azure-ai-vision-imageanalysis>=1.0.0",
+    "azure-core>=1.35.0",
 ]
 requires-python = ">=3.9"
 readme = "README.md"
