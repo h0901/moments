@@ -140,7 +140,6 @@ UPLOAD_FOLDER = "uploads"
 @confirm_required
 @permission_required('UPLOAD')
 def upload():
-    """Handles basic image upload functionality with AI-generated captions/tags."""
     if request.method == 'POST':
         if 'file' not in request.files:
             flash("No file uploaded.", "danger")
@@ -160,7 +159,6 @@ def upload():
             caption, tags = None, []
             current_app.logger.error(f"Azure Vision error: {e}")
 
-        # Create database entry for the uploaded image
         photo = Photo(
             filename=filename,
             filename_s=filename,
@@ -170,9 +168,8 @@ def upload():
         )
 
         db.session.add(photo)
-        db.session.flush()  # Ensure photo.id exists before adding tags
+        db.session.flush()
 
-        # ✅ Attach tags to photo
         for tag_name in tags:
             tag = db.session.query(Tag).filter_by(name=tag_name).first()
             if not tag:

@@ -10,7 +10,6 @@ ENDPOINT = os.getenv("AZURE_VISION_ENDPOINT") + "/vision/v3.1/analyze?visualFeat
 
 
 def analyze_image(image_path):
-    """Call Azure Vision once and return caption + tags."""
     headers = {
         "Ocp-Apim-Subscription-Key": API_KEY,
         "Content-Type": "application/octet-stream"
@@ -24,7 +23,7 @@ def analyze_image(image_path):
         return "No description available.", ["No tags available."]
 
     result = response.json()
-    print(f"API Response for {image_path}: {result}")  # Debugging
+    print(f"API Response for {image_path}: {result}") 
     captions = result.get("description", {}).get("captions", [])
     caption = captions[0]["text"] if captions else "No description available."
 
