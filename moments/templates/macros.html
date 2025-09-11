@@ -3,11 +3,21 @@
 {% macro photo_card(photo) %}
 <div class="photo-card card">
   <a class="card-thumbnail" href="{{ url_for('main.show_photo', photo_id=photo.id) }}">
-    <img class="card-img-top portrait" src="{{ url_for('main.get_image', filename=photo.filename_s) }}">
-  </a>
+    <img class="img-fluid" src="{{ url_for('main.get_image', filename=photo.filename_s) }}" 
+    alt="{{ photo.description or 'Photo' }}"> </a>
   <div class="card-body">
-    {{ render_icon('suit-heart-fill') }} {{ photo.collectors_count }}
-    {{ render_icon('chat-left-fill') }} {{ photo.comments_count }}
+    <div class="photo-caption mt-2 text-muted">
+      {{ photo.description }}
+    </div>
+    <div class="photo-tags mt-1">
+      {% for tag in photo.tags %}
+        <span class="badge bg-secondary">{{ tag.name }}</span>
+      {% endfor %}
+    </div>
+    <div class="mt-2">
+      {{ render_icon('suit-heart-fill') }} {{ photo.collectors_count }}
+      {{ render_icon('chat-left-fill') }} {{ photo.comments_count }}
+    </div>
   </div>
 </div>
 {% endmacro %}

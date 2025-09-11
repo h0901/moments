@@ -30,8 +30,9 @@
       <div class="card-body">
         <div class="text-center">
           <a class="thumbnail" href="{{ url_for('.show_photo', photo_id=photo.id) }}" target="_blank">
-            <img class="img-fluid" src="{{ url_for('.get_image', filename=photo.filename_m) }}">
-          </a>
+            <img src="{{ url_for('main.get_image', filename=photo.filename_s) }}" 
+            class="rounded img-fluid" 
+            alt="{{ photo.description or 'No description available' }}"></a>
         </div>
       </div>
       <div class="card-footer">
@@ -61,9 +62,9 @@
           </form>
           {% endif %}
         </div>
-        {% if photo.description %}
+        <!-- {% if photo.description %}
         <p class="card-text">{{ photo.description }}</p>
-        {% endif %}
+        {% endif %} -->
       </div>
     </div>
     {% endfor %}
