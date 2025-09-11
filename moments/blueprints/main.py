@@ -2,6 +2,7 @@ from flask import Blueprint, abort, current_app, flash, redirect, render_templat
 from flask_login import current_user, login_required
 from sqlalchemy import func, select
 from sqlalchemy.orm import with_parent
+from sqlalchemy import or_
 
 import os
 
@@ -51,11 +52,12 @@ def explore():
 
 
 @main_bp.route('/search')
+
+@main_bp.route('/search')
 def search():
-    q = request.args.get('q', '').strip().lower()  # Get search query
-    
+    q = request.args.get('q', '').strip().lower() 
     if not q:
-        flash('Enter keyword about photo, user, or tag.', 'warning')
+        flash('Enter a keyword about photo, user, or tag.', 'warning')
         return redirect_back()
 
     category = request.args.get('category', 'photo')
@@ -67,11 +69,12 @@ def search():
     elif category == 'tag':
         pagination = Tag.query.whooshee_search(q).paginate(page=page, per_page=per_page)
     else:
-        # Modified search for Photos: Look in `description` (alt-text) & `tags`
-        pagination = Photo.query.filter(
-            (Photo.description.ilike(f"%{q}%")) |  # Search in alt-text
-            (Photo.tags.any(Tag.name.ilike(f"%{q}%")))  # Search in tags
-        ).paginate(page=page, per_page=per_page)
+        keywords = [kw.strip() for kw in q.split() if kw.strip()]
+        conditions = []
+        for kw in keywords:
+            conditions.append(Photo.description.ilike(f"%{kw}%"))
+            conditions.append(Photo.tags.any(Tag.name.ilike(f"%{kw}%")))
+        pagination = Photo.query.filter(or_(*conditions)).paginate(page=page, per_page=per_page)
 
     results = pagination.items
 
