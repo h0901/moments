@@ -2,13 +2,16 @@ from flask import Blueprint, abort, current_app, flash, redirect, render_templat
 from flask_login import current_user, login_required
 from sqlalchemy import func, select
 from sqlalchemy.orm import with_parent
+
 import os
+
+from moments.ml_model import generate_alt_text  # Explicitly reference `moments`
 from moments.core.extensions import db
 from moments.decorators import confirm_required, permission_required
 from moments.forms.main import CommentForm, DescriptionForm, TagForm
-from moments.models import Collection, Comment, Follow, Notification, Photo, Tag, User, photo_tag
+from moments.models import Collection, Comment, Follow, Notification, Photo, Tag, User
 from moments.notifications import push_collect_notification, push_comment_notification
-from moments.utils import flash_errors, redirect_back, rename_image, resize_image, validate_image, imageAltTextGeneration, analyzeImage
+from moments.utils import flash_errors, redirect_back, rename_image, resize_image, validate_image
 
 main_bp = Blueprint('main', __name__)
 
@@ -49,23 +52,33 @@ def explore():
 
 @main_bp.route('/search')
 def search():
-    q = request.args.get('q').strip()
+    q = request.args.get('q', '').strip().lower()  # Get search query
+    
     if not q:
-        flash('Enter keyword about photo, user or tag.', 'warning')
+        flash('Enter keyword about photo, user, or tag.', 'warning')
         return redirect_back()
 
     category = request.args.get('category', 'photo')
     page = request.args.get('page', 1, type=int)
     per_page = current_app.config['MOMENTS_SEARCH_RESULT_PER_PAGE']
-    # TODO: add SQLAlchemy 2.x support to Flask-Whooshee then update the following code
+
     if category == 'user':
         pagination = User.query.whooshee_search(q).paginate(page=page, per_page=per_page)
     elif category == 'tag':
         pagination = Tag.query.whooshee_search(q).paginate(page=page, per_page=per_page)
     else:
-        pagination = Photo.query.whooshee_search(q).paginate(page=page, per_page=per_page)
+        # Modified search for Photos: Look in `description` (alt-text) & `tags`
+        pagination = Photo.query.filter(
+            (Photo.description.ilike(f"%{q}%")) |  # Search in alt-text
+            (Photo.tags.any(Tag.name.ilike(f"%{q}%")))  # Search in tags
+        ).paginate(page=page, per_page=per_page)
+
     results = pagination.items
-    return render_template('main/search.html', q=q, results=results, pagination=pagination, category=category)
+
+    return render_template(
+        'main/search.html', q=q, results=results, pagination=pagination, category=category
+    )
+
 
 
 @main_bp.route('/notifications')
@@ -117,49 +130,68 @@ def get_image(filename):
 def get_avatar(filename):
     return send_from_directory(current_app.config['AVATARS_SAVE_PATH'], filename)
 
+UPLOAD_FOLDER = "uploads"
 
 @main_bp.route('/upload', methods=['GET', 'POST'])
 @login_required
 @confirm_required
 @permission_required('UPLOAD')
 def upload():
+    """Handles basic image upload functionality with AI-generated captions/tags."""
     if request.method == 'POST':
         if 'file' not in request.files:
-            return 'No image.', 400
+            flash("No file uploaded.", "danger")
+            return redirect(url_for("main.upload"))
+
         f = request.files.get('file')
         if not validate_image(f.filename):
-            return 'Invalid image.', 400
-        filename = rename_image(f.filename)
-        image_path = current_app.config['MOMENTS_UPLOAD_PATH']/filename
-        f.save(str(image_path))
-        filename_s = resize_image(f, filename, current_app.config['MOMENTS_PHOTO_SIZES']['small'])
-        filename_m = resize_image(f, filename, current_app.config['MOMENTS_PHOTO_SIZES']['medium'])
-        f.seek(0)
-        binaryImage = f.read()
-        description = imageAltTextGeneration(binaryImage)
+            flash("Invalid image format.", "danger")
+            return redirect(url_for("main.upload"))
 
+        filename = rename_image(f.filename)
+        file_path = os.path.join(current_app.config['MOMENTS_UPLOAD_PATH'], filename)
+        f.save(file_path)  # Save the image
+
+        # ✅ Generate AI caption + tags
+        try:
+            caption = generate_alt_text(file_path)
+        except Exception as e:
+            caption = None
+            current_app.logger.error(f"Azure Vision error: {e}")
+
+        from moments.ml_model import generate_tags  # import here to avoid circular
+        try:
+            tags = generate_tags(file_path)
+        except Exception as e:
+            tags = []
+            current_app.logger.error(f"Tag generation error: {e}")
+
+        # Create database entry for the uploaded image
         photo = Photo(
-            filename=filename, 
-            filename_s=filename_s, 
-            filename_m=filename_m, 
-            author=current_user._get_current_object(), 
-            description=description
+            filename=filename,
+            filename_s=filename,
+            filename_m=filename,
+            author=current_user._get_current_object(),
+            description=caption
         )
+
         db.session.add(photo)
-        db.session.commit()
-        f.seek(0)
-        binaryImage = f.read()
-        tags = analyzeImage(binaryImage)
-        tag_objects = []
+        db.session.flush()  # Ensure photo.id exists before adding tags
+
+        # ✅ Attach tags to photo
         for tag_name in tags:
-            tag = db.session.scalar(select(Tag).filter_by(name=tag_name))
-            if tag is None:
+            tag = db.session.query(Tag).filter_by(name=tag_name).first()
+            if not tag:
                 tag = Tag(name=tag_name)
                 db.session.add(tag)
-                db.session.commit()
-            tag_objects.append(tag)
-        photo.tags.extend(tag_objects)  
+                db.session.flush()
+            if tag not in photo.tags:
+                photo.tags.append(tag)
+
         db.session.commit()
+
+        flash("✅ Image uploaded successfully with AI description/tags!", "success")
+        return redirect(url_for("main.index"))
 
     return render_template('main/upload.html')
 
@@ -170,7 +202,9 @@ def show_photo(photo_id):
     page = request.args.get('page', 1, type=int)
     per_page = current_app.config['MOMENTS_COMMENT_PER_PAGE']
     pagination = db.paginate(
-        select(Comment).filter_by(photo_id=photo.id).order_by(Comment.created_at.asc()), page=page, per_page=per_page
+        select(Comment).filter_by(photo_id=photo.id).order_by(Comment.created_at.asc()), 
+        page=page, 
+        per_page=per_page
     )
     comments = pagination.items
 
@@ -179,6 +213,11 @@ def show_photo(photo_id):
     tag_form = TagForm()
 
     description_form.description.data = photo.description
+
+    # ✅ Debugging logs
+    print("Rendering Photo:", photo.filename)
+    print("Photo Description (ALT text):", photo.description)
+
     return render_template(
         'main/photo.html',
         photo=photo,
@@ -188,6 +227,7 @@ def show_photo(photo_id):
         pagination=pagination,
         comments=comments,
     )
+
 
 
 @main_bp.route('/photo/n/<int:photo_id>')

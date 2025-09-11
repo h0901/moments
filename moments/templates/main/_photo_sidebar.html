@@ -33,6 +33,15 @@
   <div class="card-body">
     <div id="description">
       <p>
+        {% if photo.tags %}
+    {% for tag in photo.tags %}
+        {{ tag.name }}{% if not loop.last %}, {% endif %}
+    {% endfor %}
+{% else %}
+    <small class="text-muted">No tags</small>
+{% endif %}
+      </p>
+      <!-- <p>
         {% if photo.description %}
         {{ photo.description }}
         {% else %}
@@ -43,7 +52,7 @@
           <small>{{ render_icon('pencil-fill') }}</small>
         </a>
         {% endif %}
-      </p>
+      </p> -->
     </div>
     {% if current_user == photo.author %}
     <div id="description-form">
