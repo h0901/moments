@@ -10,9 +10,17 @@
   <div class="col-lg-8">
     <div class="photo">
       <a href="{{ url_for('.get_image', filename=photo.filename) }}" target="_blank">
-        <img class="img-fluid" src="{{ url_for('.get_image', filename=photo.filename_m) }}"
-        alt="{% if photo.tags %}{% for tag in photo.tags %}{{ tag.name }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}No tags available{% endif %}">       
+        <img class="img-fluid" 
+            src="{{ url_for('.get_image', filename=photo.filename_m) }}"
+            alt="{{ photo.description or 'No description available' }}">
       </a>
+
+      {% if photo.description %}
+        <p class="mt-2 text-muted fst-italic">
+          {{ photo.description }}
+        </p>
+      {% endif %}
+
       <span class="photo-bottom"></span>
     </div>
     {% if current_user.is_authenticated %}

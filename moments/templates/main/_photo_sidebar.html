@@ -10,18 +10,21 @@
     </li>
   </ul>
 </nav>
+
 <div class="card bg-light mb-3 sidebar-card">
   <div class="card-body">
     <div class="row row-cols-auto">
       <div class="col">
         <a href="{{ url_for('user.index', username=photo.author.username) }}">
           <img class="rounded avatar-m"
-            src="{{ url_for('main.get_avatar', filename=photo.author.avatar_m) }}">
+               src="{{ url_for('main.get_avatar', filename=photo.author.avatar_m) }}">
         </a>
       </div>
       <div class="col">
         <h6 class="card-title">
-          <a class="text-decoration-none" href="{{ url_for('user.index', username=photo.author.username) }}">{{ photo.author.name }}</a>
+          <a class="text-decoration-none" href="{{ url_for('user.index', username=photo.author.username) }}">
+            {{ photo.author.name }}
+          </a>
         </h6>
         <p class="card-subtitle mb-2 text-muted">{{ photo.author.username }}</p>
         {{ follow_area(photo.author) }}
@@ -29,59 +32,56 @@
     </div>
   </div>
 </div>
+
 <div class="card bg-light mb-3">
   <div class="card-body">
+
     <div id="description">
       <p>
-        {% if photo.tags %}
-    {% for tag in photo.tags %}
-        {{ tag.name }}{% if not loop.last %}, {% endif %}
-    {% endfor %}
-{% else %}
-    <small class="text-muted">No tags</small>
-{% endif %}
-      </p>
-      <!-- <p>
         {% if photo.description %}
-        {{ photo.description }}
+          {{ photo.description }}
         {% else %}
-        <small class="text-muted">No description</small>
+          <small class="text-muted">No description</small>
         {% endif %}
         {% if current_user == photo.author %}
-        <a id="description-btn" href="#!">
-          <small>{{ render_icon('pencil-fill') }}</small>
-        </a>
+          <a id="description-btn" href="#!">
+            <small>{{ render_icon('pencil-fill') }}</small>
+          </a>
         {% endif %}
-      </p> -->
+      </p>
     </div>
+
     {% if current_user == photo.author %}
     <div id="description-form">
       <form action="{{ url_for('.edit_description', photo_id=photo.id) }}" method="post">
         {{ description_form.csrf_token }}
-        {{ render_field(description_form.description) }}
+        {{ render_field(description_form.description, value=photo.description) }}
         <a class="btn btn-light btn-sm" id="cancel-description">Cancel</a>
         {{ render_field(description_form.submit, class='btn-success btn-sm description-submit-btn') }}
       </form>
     </div>
     {% endif %}
+
     <div id="tags">
       <p>
         {% if photo.tags %}
-        {% for tag in photo.tags %}
-        <a class="badge text-bg-secondary rounded-pill text-decoration-none" href="{{ url_for('.show_tag', tag_id=tag.id) }}" target="_blank">
-          {{ render_icon('tag-fill') }} {{ tag.name }}
-        </a>
-        {% endfor %}
+          {% for tag in photo.tags %}
+          <a class="badge text-bg-secondary rounded-pill text-decoration-none"
+             href="{{ url_for('.show_tag', tag_id=tag.id) }}" target="_blank">
+            {{ render_icon('tag-fill') }} {{ tag.name }}
+          </a>
+          {% endfor %}
         {% else %}
-        <small class="text-muted">No tags</small>
+          <small class="text-muted">No tags</small>
         {% endif %}
         {% if current_user == photo.author %}
-        <a id="tag-btn" href="#!">
-          <small>{{ render_icon('pencil-fill') }}</small>
-        </a>
+          <a id="tag-btn" href="#!">
+            <small>{{ render_icon('pencil-fill') }}</small>
+          </a>
         {% endif %}
       </p>
     </div>
+
     {% if current_user == photo.author %}
     <div id="tag-form">
       <form action="{{ url_for('.new_tag', photo_id=photo.id) }}" method="post">
@@ -93,10 +93,11 @@
       {% if photo.tags %}
       <hr>
       {% for tag in photo.tags %}
-      <a class="dead-link" href="#!" data-href="{{ url_for('.delete_tag', photo_id=photo.id, tag_id=tag.id) }}"
-        data-bs-toggle="modal" data-bs-target="#delete-modal" title="Delete tag">
+      <a class="dead-link" href="#!"
+         data-href="{{ url_for('.delete_tag', photo_id=photo.id, tag_id=tag.id) }}"
+         data-bs-toggle="modal" data-bs-target="#delete-modal" title="Delete tag">
         <span class="badge text-bg-danger rounded-pill">
-          {{ tag.name }} {{ render_icon('trash-fill') }}</span>
+          {{ tag.name }} {{ render_icon('trash-fill') }}
         </span>
       </a>
       {% endfor %}
@@ -104,8 +105,10 @@
     </div>
     {% endif %}
     {% if photo.collections %}
-    <a class="text-decoration-none" href="{{ url_for('main.show_collectors', photo_id=photo.id) }}">{{ photo.collectors_count }}
-      collectors</a>
+    <a class="text-decoration-none"
+       href="{{ url_for('main.show_collectors', photo_id=photo.id) }}">
+      {{ photo.collectors_count }} collectors
+    </a>
     {% endif %}
   </div>
 </div>

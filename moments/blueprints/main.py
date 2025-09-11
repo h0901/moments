@@ -5,7 +5,7 @@ from sqlalchemy.orm import with_parent
 
 import os
 
-from moments.ml_model import generate_alt_text  # Explicitly reference `moments`
+from moments.ml_model import analyze_image  
 from moments.core.extensions import db
 from moments.decorators import confirm_required, permission_required
 from moments.forms.main import CommentForm, DescriptionForm, TagForm
@@ -150,21 +150,12 @@ def upload():
 
         filename = rename_image(f.filename)
         file_path = os.path.join(current_app.config['MOMENTS_UPLOAD_PATH'], filename)
-        f.save(file_path)  # Save the image
-
-        # ✅ Generate AI caption + tags
+        f.save(file_path)  
         try:
-            caption = generate_alt_text(file_path)
+            caption, tags = analyze_image(file_path)
         except Exception as e:
-            caption = None
+            caption, tags = None, []
             current_app.logger.error(f"Azure Vision error: {e}")
-
-        from moments.ml_model import generate_tags  # import here to avoid circular
-        try:
-            tags = generate_tags(file_path)
-        except Exception as e:
-            tags = []
-            current_app.logger.error(f"Tag generation error: {e}")
 
         # Create database entry for the uploaded image
         photo = Photo(
@@ -214,9 +205,9 @@ def show_photo(photo_id):
 
     description_form.description.data = photo.description
 
-    # ✅ Debugging logs
     print("Rendering Photo:", photo.filename)
     print("Photo Description (ALT text):", photo.description)
+    print("Photo Tags:", [tag.name for tag in photo.tags])
 
     return render_template(
         'main/photo.html',

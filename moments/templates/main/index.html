@@ -32,8 +32,7 @@
           <a class="thumbnail" href="{{ url_for('.show_photo', photo_id=photo.id) }}" target="_blank">
             <img src="{{ url_for('main.get_image', filename=photo.filename_s) }}" 
             class="rounded img-fluid" 
-            alt="{% if photo.tags %}{% for tag in photo.tags %}{{ tag.name }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}No tags available{% endif %}">       
-          </a>
+            alt="{{ photo.description or 'No description available' }}"></a>
         </div>
       </div>
       <div class="card-footer">
