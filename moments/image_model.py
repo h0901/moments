@@ -8,7 +8,6 @@ load_dotenv()
 API_KEY = os.getenv("AZURE_VISION_KEY")
 ENDPOINT = os.getenv("AZURE_VISION_ENDPOINT") + "/vision/v3.1/analyze?visualFeatures=Tags,Description,Categories"
 
-
 def analyze_image(image_path):
     headers = {
         "Ocp-Apim-Subscription-Key": API_KEY,

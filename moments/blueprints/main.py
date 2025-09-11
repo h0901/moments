@@ -6,7 +6,7 @@ from sqlalchemy import or_
 
 import os
 
-from moments.ml_model import analyze_image  
+from moments.image_model import analyze_image  
 from moments.core.extensions import db
 from moments.decorators import confirm_required, permission_required
 from moments.forms.main import CommentForm, DescriptionForm, TagForm
