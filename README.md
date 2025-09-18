@@ -52,3 +52,19 @@ $ pdm run flask run
 
 This project is licensed under the MIT License (see the
 [LICENSE](LICENSE) file for details).
+
+## Additional setup 
+## Azure Setup
+
+This project uses Azure Computer Vision for auto-generating captions (alt text) for uploaded photos.  
+
+1. Create a free Azure account and enable **Computer Vision** in the portal.  
+2. Copy your **Endpoint** and **API Key** from the Azure dashboard.  
+3. Create a `.env` file in the project root and add:
+
+> [!NOTE]
+> The `requirements.txt` file has been updated to include:
+> - `python-dotenv` (for environment variable support)  
+> - `requests` (for API calls)  
+
+
